@@ -1,28 +1,21 @@
-import java.util.ArrayDeque;
-import java.util.Deque;
+import java.util.PriorityQueue;
+import java.util.Queue;
 
 public class GameController implements Runnable {
-    enum Direction {
-        UP, DOWN, LEFT, RIGHT,
-    }
-
     private volatile boolean isRunning;
     private long nextTickTime;
     private long nextSpawnTime;
     private static final byte TARGET_TICKRATE = 120;
-    private static final double SPAWN_DIST = 1;
     private static final long SPAWN_COOLDOWN = 400;
-    private static final double ENTITY_VEL = 0.005;
-    private static final double COLLISION_RADIUS_SQUARED = 0.01;
     private InputLayer inputLayer;
 
     private Direction curDirection = Direction.UP;
-    private Deque<Entity> entityQueue;
+    private Queue<Entity> entityQueue;
 
     GameController(InputLayer inputLayer) {
         this.inputLayer = inputLayer;
         isRunning = true;
-        entityQueue = new ArrayDeque<>();
+        entityQueue = new PriorityQueue<>((e1, e2) -> (int)(e1.endTime - e2.endTime));
     }
 
     @Override
@@ -42,7 +35,7 @@ public class GameController implements Runnable {
         // Spawn entities
         if (curTime > nextSpawnTime) {
             nextSpawnTime = curTime + SPAWN_COOLDOWN;
-            entityQueue.addLast(generateEntity());
+            entityQueue.add(generateEntity());
         }
 
         // Set direction
@@ -53,44 +46,33 @@ public class GameController implements Runnable {
             } catch (Exception ignored) {}
         }
 
-        // Update entities
-        for (Entity e : entityQueue) {
-            e.update();
-        }
-
         if (entityQueue.size() > 0) {
-            Entity first = entityQueue.peekFirst();
-            final double mag2 = first.getPos().getMag2();
-            if (mag2 < COLLISION_RADIUS_SQUARED) {
-                entityQueue.removeFirst();
+            Entity first = entityQueue.peek();
+            if (first.endTime < curTime) {
+                entityQueue.remove();
             }
         }
     }
 
     private Entity generateEntity() {
-        final Vector pos = new Vector(0, 0);
-        final Vector vel = new Vector(0, 0);
+        Direction direction = null;
 
         switch((int) (4 * Math.random())) {
             case 0: // UP
-                pos.y = -SPAWN_DIST;
-                vel.y = ENTITY_VEL;
+                direction = Direction.UP;
                 break;
             case 1: // DOWN
-                pos.y = SPAWN_DIST;
-                vel.y = -ENTITY_VEL;
+                direction = Direction.DOWN;
                 break;
             case 2: // LEFT
-                pos.x = -SPAWN_DIST;
-                vel.x = ENTITY_VEL;
+                direction = Direction.LEFT;
                 break;
             case 3: // RIGHT
-                pos.x = SPAWN_DIST;
-                vel.x = -ENTITY_VEL;
+                direction = Direction.RIGHT;
                 break;
         }
 
-        return new Entity(pos, vel);
+        return new Entity(System.currentTimeMillis() + 3000, 1000 + 500 * (int) (3 * Math.random()), direction);
     }
 
     void stop() {
@@ -101,7 +83,8 @@ public class GameController implements Runnable {
         return curDirection;
     }
 
-    Deque<Entity> getEntities() {
-        return entityQueue;
+    void getEntities(Queue<Entity> container) {
+        container.clear();
+        container.addAll(entityQueue);
     }
 }

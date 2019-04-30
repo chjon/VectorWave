@@ -1,18 +1,15 @@
-public class Entity {
-    private Vector pos;
-    private Vector vel;
+class Entity {
+    final long endTime;
+    final long duration;
+    final Direction direction;
 
-    Entity(Vector pos, Vector vel) {
-        this.pos = pos;
-        this.vel = vel;
+    Entity(long endTime, long duration, Direction direction) {
+        this.endTime = endTime;
+        this.duration = duration;
+        this.direction = direction;
     }
 
-    void update() {
-        pos.x += vel.x;
-        pos.y += vel.y;
-    }
-
-    Vector getPos() {
-        return new Vector(pos);
+    double getRemaining(long curTime) {
+        return (endTime - curTime) / (double) duration;
     }
 }

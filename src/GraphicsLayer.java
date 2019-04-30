@@ -6,6 +6,7 @@ import java.awt.geom.AffineTransform;
 import java.awt.image.AffineTransformOp;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.util.ArrayDeque;
 import java.util.Deque;
 
 public class GraphicsLayer implements Runnable {
@@ -19,12 +20,15 @@ public class GraphicsLayer implements Runnable {
     private final InputLayer inputLayer;
     private final GameController gameController;
 
+    private Deque<Entity> entitiesToDraw;
+
     private BufferedImage arrowImage;
 
     GraphicsLayer(JFrame window, InputLayer inputLayer, GameController gameController) {
         this.window = window;
         this.inputLayer = inputLayer;
         this.gameController = gameController;
+        entitiesToDraw = new ArrayDeque<>();
 
         try {
             File file = new File("res/arrow.png");
@@ -77,7 +81,7 @@ public class GraphicsLayer implements Runnable {
     }
 
     private void drawArrow(int width, int height) {
-        final GameController.Direction direction = gameController.getCurDirection();
+        final Direction direction = gameController.getCurDirection();
 
         BufferedImage rotatedArrowImage;
         switch (direction) {
@@ -97,17 +101,16 @@ public class GraphicsLayer implements Runnable {
         }
 
         final int size = (int) (0.1 * height);
-        buffer.drawImage(rotatedArrowImage, width / 2 - size / 2, height / 2 - size / 2, size, size, null);
+        buffer.drawImage(rotatedArrowImage, - size / 2, - size / 2, size, size, null);
     }
 
     private void drawEntity(Entity e, int width, int height) {
-        final Vector pos = e.getPos();
         final int scaleFactor = Math.min(width, height) / 2;
-        pos.x *= scaleFactor;
-        pos.y *= scaleFactor;
+        final double remaining = e.getRemaining(System.currentTimeMillis()) * scaleFactor;
         final int size = (int) (0.03 * scaleFactor);
+        final Vector pos = new Vector(0, remaining).rotate(e.direction);
         buffer.setColor(new Color(0xFF7700));
-        buffer.fillArc((int) pos.x + width / 2 - size / 2, (int) pos.y + height / 2 - size / 2, size, size, 0, 360);
+        buffer.fillArc((int) pos.x - size / 2, (int) pos.y - size / 2, size, size, 0, 360);
     }
 
     private void draw() {
@@ -117,18 +120,18 @@ public class GraphicsLayer implements Runnable {
         buffer.clearRect(0, 0, width, height);
 
         buffer.setColor(new Color(0x333333));
-        buffer.fillRect(
-            (int) (0.1 * width),
-            (int) (0.1 * height),
-            (int) (0.8 * width),
-            (int) (0.8 * height)
-        );
 
+        buffer.translate(width / 2, height / 2);
+
+        final int size = Math.min(width, height);
+        buffer.fillArc(-size / 2, -size / 2, size, size , 0, 360);
         drawArrow(width, height);
-        Deque<Entity> entities = gameController.getEntities();
-        for (Entity e : entities) {
+        gameController.getEntities(entitiesToDraw);
+        for (Entity e : entitiesToDraw) {
             drawEntity(e, width, height);
         }
+
+        buffer.translate(-width / 2, -height / 2);
 
         g.drawImage(bufferImage, 0, 0, null);
     }
