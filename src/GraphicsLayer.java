@@ -41,6 +41,7 @@ public class GraphicsLayer implements Runnable {
         imagePathMap = new TreeMap<>();
 
         imagePathMap.put("arrow", "res/arrow.png");
+        imagePathMap.put("enemy_0", "res/enemy_0.png");
         imagePathMap.put("enemy_1", "res/enemy_1.png");
 
         for (Map.Entry<String, String> entry : imagePathMap.entrySet()) {
@@ -124,14 +125,31 @@ public class GraphicsLayer implements Runnable {
             return;
         }
 
-        final double angle = getAngle(e.direction) + Math.PI;
-        Sprite entitySprite = new Sprite("enemy_1");
+        Sprite entitySprite = new Sprite("enemy_" + e.type);
+        double angle = getAngle(e.direction) + Math.PI;
+        final double remaining = e.getRemaining(curTime);
+
+        switch (e.type) {
+            case 1:
+                final double BEGIN_SPIN = 0.6;
+                final double END_SPIN = 0.3;
+                final double SPIN_TIME = BEGIN_SPIN - END_SPIN;
+
+                if (remaining >= BEGIN_SPIN) {
+                    angle += Math.PI;
+                } else if (remaining >= END_SPIN) {
+                    angle += Math.PI * (remaining - SPIN_TIME) / SPIN_TIME;
+                }
+                break;
+            default:
+                break;
+        }
+
+        final double scaleFactor = (1 - PLAYER_RADIUS - ENTITY_RADIUS / 4) * Math.min(windowDimensions.width, windowDimensions.height) / 2d;
+        entitySprite.setAngle(angle);
+        entitySprite.setPos(new Vector(0, remaining + PLAYER_RADIUS + ENTITY_RADIUS / 4).rotate(angle));
         entitySprite.setCentre(true);
         entitySprite.setSize(ENTITY_RADIUS, ENTITY_RADIUS);
-        entitySprite.setAngle(angle);
-        final double remaining = e.getRemaining(curTime) + PLAYER_RADIUS + ENTITY_RADIUS / 4;
-        entitySprite.setPos(new Vector(0, remaining).rotate(angle));
-        final double scaleFactor = (1 - PLAYER_RADIUS - ENTITY_RADIUS / 4) * Math.min(windowDimensions.width, windowDimensions.height) / 2d;
         drawSprite(entitySprite, scaleFactor);
     }
 

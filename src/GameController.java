@@ -1,4 +1,3 @@
-import java.util.ArrayDeque;
 import java.util.Queue;
 
 public class GameController implements Runnable {
@@ -17,13 +16,11 @@ public class GameController implements Runnable {
     private int miss = 0;
     private long startTime;
     private double highscore;
-    private Queue<GameEvent> eventQueue;
 
     GameController(InputLayer inputLayer) {
         this.inputLayer = inputLayer;
         isRunning = true;
         entityQueue = new AsyncPriorityQueue<>((e1, e2) -> (int)(e1.endTime - e2.endTime));
-        eventQueue = new ArrayDeque<>();
     }
 
     @Override
@@ -59,10 +56,8 @@ public class GameController implements Runnable {
             Entity first = entityQueue.peek();
             if (first.endTime < curTime) {
                 if (first.direction == curDirection) {
-                    eventQueue.add(new GameEvent("Hit", first.direction));
                     hit++;
                 } else {
-                    eventQueue.add(new GameEvent("Miss", first.direction));
                     miss++;
                     highscore = Math.max(highscore, getTimeElapsed());
                     startTime = curTime;
@@ -91,7 +86,7 @@ public class GameController implements Runnable {
                 break;
         }
 
-        return new Entity(System.currentTimeMillis() + START_DELAY, MIN_DURATION + 500 * (int) (3 * Math.random()), direction);
+        return new Entity(System.currentTimeMillis() + START_DELAY, MIN_DURATION, direction, (int) Math.round(Math.random()));
     }
 
     void stop() {
