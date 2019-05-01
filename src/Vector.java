@@ -39,4 +39,8 @@ public class Vector {
                 return new Vector(this);
         }
     }
+
+    Vector scale(double lambda) {
+        return new Vector(x * lambda, y * lambda);
+    }
 }

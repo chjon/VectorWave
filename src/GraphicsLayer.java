@@ -8,6 +8,8 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.Map;
+import java.util.TreeMap;
 
 public class GraphicsLayer implements Runnable {
     private JFrame window;
@@ -22,22 +24,31 @@ public class GraphicsLayer implements Runnable {
 
     private Deque<Entity> entitiesToDraw;
 
-    private BufferedImage arrowImage;
     private byte targetFPS = 60;
     private static final double PLAYER_RADIUS = 0.1;
     private static final double ENTITY_RADIUS = 0.06;
+
+    private Map<String, BufferedImage> imageMap;
+    private Map<String, String> imagePathMap;
 
     GraphicsLayer(JFrame window, InputLayer inputLayer, GameController gameController) {
         this.window = window;
         this.inputLayer = inputLayer;
         this.gameController = gameController;
         entitiesToDraw = new ArrayDeque<>();
+        imageMap = new TreeMap<>();
+        imagePathMap = new TreeMap<>();
 
-        try {
-            File file = new File("res/arrow.png");
-            arrowImage = ImageIO.read(file);
-        } catch (java.io.IOException e) {
-            System.err.println(e.getMessage());
+        imagePathMap.put("arrow", "res/arrow.png");
+        imagePathMap.put("enemy_1", "res/enemy_1.png");
+
+        for (Map.Entry<String, String> entry : imagePathMap.entrySet()) {
+            try {
+                File file = new File(entry.getValue());
+                imageMap.put(entry.getKey(), ImageIO.read(file));
+            } catch (java.io.IOException e) {
+                System.err.println(e.getMessage() + " " + entry.getValue());
+            }
         }
 
         window.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
@@ -67,7 +78,7 @@ public class GraphicsLayer implements Runnable {
             }
 
             nextFrameTime = curTime + 1000 / targetFPS;
-            draw();
+            draw(curTime);
         }
     }
 
@@ -83,41 +94,65 @@ public class GraphicsLayer implements Runnable {
         return operation.filter(image, null);
     }
 
-    private void drawArrow(int width, int height) {
-        final Direction direction = gameController.getCurDirection();
-
-        BufferedImage rotatedArrowImage;
+    private double getAngle(Direction direction) {
         switch (direction) {
             case DOWN:
-                rotatedArrowImage = rotateImage(arrowImage, Math.PI);
-                break;
+                return Math.PI;
             case LEFT:
-                rotatedArrowImage = rotateImage(arrowImage, -Math.PI / 2);
-                break;
+                return -Math.PI / 2;
             case RIGHT:
-                rotatedArrowImage = rotateImage(arrowImage, Math.PI / 2);
-                break;
+                return Math.PI / 2;
             case UP:
             default:
-                rotatedArrowImage = rotateImage(arrowImage, 0);
-                break;
+                return 0;
+        }
+    }
+
+    private void drawArrow() {
+        final double angle = getAngle(gameController.getCurDirection());
+
+        Sprite arrowSprite = new Sprite("arrow");
+        arrowSprite.setCentre(true);
+        arrowSprite.setSize(PLAYER_RADIUS, PLAYER_RADIUS);
+        arrowSprite.setAngle(angle);
+        drawSprite(arrowSprite, Math.min(windowDimensions.width, windowDimensions.height));
+    }
+
+    private void drawEntity(Entity e, long curTime) {
+        if (curTime + e.duration < e.endTime) {
+            return;
         }
 
-        final int size = (int) (PLAYER_RADIUS * Math.min(width, height));
-        buffer.drawImage(rotatedArrowImage, - size / 2, - size / 2, size, size, null);
-        buffer.drawArc(-size / 2, -size / 2, size, size, 0, 360);
+        final double angle = getAngle(e.direction);
+        Sprite entitySprite = new Sprite("enemy_1");
+        entitySprite.setCentre(true);
+        entitySprite.setSize(ENTITY_RADIUS, ENTITY_RADIUS);
+        entitySprite.setAngle(angle);
+        final double remaining = e.getRemaining(curTime) + PLAYER_RADIUS + ENTITY_RADIUS / 2;
+        entitySprite.setPos(new Vector(0, remaining).rotate(e.direction));
+        final double scaleFactor = (1 - PLAYER_RADIUS - ENTITY_RADIUS / 2) * Math.min(windowDimensions.width, windowDimensions.height) / 2d;
+        drawSprite(entitySprite, scaleFactor);
     }
 
-    private void drawEntity(Entity e, int width, int height) {
-        final double scaleFactor = (1 - PLAYER_RADIUS - ENTITY_RADIUS / 2) * Math.min(width, height) / 2d;
-        final double remaining = (e.getRemaining(System.currentTimeMillis()) + PLAYER_RADIUS + ENTITY_RADIUS / 2) * scaleFactor;
-        final int size = (int) (ENTITY_RADIUS * scaleFactor);
-        final Vector pos = new Vector(0, remaining).rotate(e.direction);
-        buffer.setColor(new Color(0xFF7700));
-        buffer.fillArc((int) pos.x - size / 2, (int) pos.y - size / 2, size, size, 0, 360);
+    private void drawSprite(Sprite sprite, double scaleFactor) {
+        BufferedImage sourceImage = imageMap.get(sprite.getSourceImage());
+        if (sourceImage == null) {
+            sourceImage = new BufferedImage(1, 1, BufferedImage.TYPE_INT_RGB);
+        }
+
+        final BufferedImage transformedImage = rotateImage(sourceImage, sprite.getAngle());
+        final Vector pos = sprite.getPos().scale(scaleFactor);
+        final double newWidth = sprite.getWidth() * scaleFactor;
+        final double newHeight = sprite.getHeight() * scaleFactor;
+        if (sprite.shouldCentre()) {
+            pos.x -= newWidth / 2;
+            pos.y -= newHeight / 2;
+        }
+
+        buffer.drawImage(transformedImage, (int) pos.x, (int) pos.y, (int) newWidth, (int) newHeight, null);
     }
 
-    private void draw() {
+    private void draw(long curTime) {
         final Graphics g = window.getGraphics();
         final int width = windowDimensions.width;
         final int height = windowDimensions.height;
@@ -133,11 +168,11 @@ public class GraphicsLayer implements Runnable {
         // Draw entities
         gameController.getEntities(entitiesToDraw);
         for (Entity e : entitiesToDraw) {
-            drawEntity(e, width, height);
+            drawEntity(e, curTime);
         }
 
         // Draw player
-        drawArrow(width, height);
+        drawArrow();
 
         buffer.translate(-width / 2, -height / 2);
 

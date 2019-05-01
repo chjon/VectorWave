@@ -6,7 +6,7 @@ public class GameController implements Runnable {
     private long nextTickTime;
     private long nextSpawnTime;
     private static final byte TARGET_TICKRATE = 120;
-    private static final long SPAWN_COOLDOWN = 400;
+    private static final long SPAWN_COOLDOWN = 300;
     private InputLayer inputLayer;
 
     private Direction curDirection = Direction.UP;
@@ -35,7 +35,10 @@ public class GameController implements Runnable {
         // Spawn entities
         if (curTime > nextSpawnTime) {
             nextSpawnTime = curTime + SPAWN_COOLDOWN;
-            entityQueue.add(generateEntity());
+            Entity generated = generateEntity();
+            if (generated != null) {
+                entityQueue.add(generated);
+            }
         }
 
         // Set direction
@@ -72,7 +75,7 @@ public class GameController implements Runnable {
                 break;
         }
 
-        return new Entity(System.currentTimeMillis() + 3000, 1500 + 500 * (int) (3 * Math.random()), direction);
+        return new Entity(System.currentTimeMillis() + 3000, 1000 + 500 * (int) (3 * Math.random()), direction);
     }
 
     void stop() {
