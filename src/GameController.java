@@ -72,7 +72,7 @@ public class GameController implements Runnable {
                 break;
         }
 
-        return new Entity(System.currentTimeMillis() + 3000, 1000 + 500 * (int) (3 * Math.random()), direction);
+        return new Entity(System.currentTimeMillis() + 3000, 1500 + 500 * (int) (3 * Math.random()), direction);
     }
 
     void stop() {

@@ -13,16 +13,19 @@ public class GraphicsLayer implements Runnable {
     private JFrame window;
     private Image bufferImage;
     private Graphics buffer;
-    private volatile boolean isRunning;
-    private long nextFrameTime;
-    private byte targetFPS = 60;
-    private Dimension windowDimensions;
     private final InputLayer inputLayer;
     private final GameController gameController;
+
+    private volatile boolean isRunning;
+    private long nextFrameTime;
+    private Dimension windowDimensions;
 
     private Deque<Entity> entitiesToDraw;
 
     private BufferedImage arrowImage;
+    private byte targetFPS = 60;
+    private static final double PLAYER_RADIUS = 0.1;
+    private static final double ENTITY_RADIUS = 0.06;
 
     GraphicsLayer(JFrame window, InputLayer inputLayer, GameController gameController) {
         this.window = window;
@@ -100,14 +103,15 @@ public class GraphicsLayer implements Runnable {
                 break;
         }
 
-        final int size = (int) (0.1 * height);
+        final int size = (int) (PLAYER_RADIUS * Math.min(width, height));
         buffer.drawImage(rotatedArrowImage, - size / 2, - size / 2, size, size, null);
+        buffer.drawArc(-size / 2, -size / 2, size, size, 0, 360);
     }
 
     private void drawEntity(Entity e, int width, int height) {
-        final int scaleFactor = Math.min(width, height) / 2;
-        final double remaining = e.getRemaining(System.currentTimeMillis()) * scaleFactor;
-        final int size = (int) (0.03 * scaleFactor);
+        final double scaleFactor = (1 - PLAYER_RADIUS - ENTITY_RADIUS / 2) * Math.min(width, height) / 2d;
+        final double remaining = (e.getRemaining(System.currentTimeMillis()) + PLAYER_RADIUS + ENTITY_RADIUS / 2) * scaleFactor;
+        final int size = (int) (ENTITY_RADIUS * scaleFactor);
         final Vector pos = new Vector(0, remaining).rotate(e.direction);
         buffer.setColor(new Color(0xFF7700));
         buffer.fillArc((int) pos.x - size / 2, (int) pos.y - size / 2, size, size, 0, 360);
@@ -125,11 +129,15 @@ public class GraphicsLayer implements Runnable {
 
         final int size = Math.min(width, height);
         buffer.fillArc(-size / 2, -size / 2, size, size , 0, 360);
-        drawArrow(width, height);
+
+        // Draw entities
         gameController.getEntities(entitiesToDraw);
         for (Entity e : entitiesToDraw) {
             drawEntity(e, width, height);
         }
+
+        // Draw player
+        drawArrow(width, height);
 
         buffer.translate(-width / 2, -height / 2);
 
