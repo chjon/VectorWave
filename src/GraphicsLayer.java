@@ -129,9 +129,9 @@ public class GraphicsLayer implements Runnable {
         entitySprite.setCentre(true);
         entitySprite.setSize(ENTITY_RADIUS, ENTITY_RADIUS);
         entitySprite.setAngle(angle);
-        final double remaining = e.getRemaining(curTime) + PLAYER_RADIUS + ENTITY_RADIUS / 2;
+        final double remaining = e.getRemaining(curTime) + PLAYER_RADIUS + ENTITY_RADIUS / 4;
         entitySprite.setPos(new Vector(0, remaining).rotate(angle));
-        final double scaleFactor = (1 - PLAYER_RADIUS - ENTITY_RADIUS / 2) * Math.min(windowDimensions.width, windowDimensions.height) / 2d;
+        final double scaleFactor = (1 - PLAYER_RADIUS - ENTITY_RADIUS / 4) * Math.min(windowDimensions.width, windowDimensions.height) / 2d;
         drawSprite(entitySprite, scaleFactor);
     }
 
@@ -163,12 +163,15 @@ public class GraphicsLayer implements Runnable {
         }
     }
 
-    private void drawCentredText(String text, Font font, Vector centre) {
+    private void drawCentredText(String[] text, Font font, Vector pos) {
         buffer.setFont(font);
         FontMetrics metrics = buffer.getFontMetrics(font);
-        int x = (int) centre.x - metrics.stringWidth(text) / 2;
-        int y = (int) centre.y - metrics.getHeight() / 2;
-        buffer.drawString(text, x, y);
+        int height = metrics.getHeight();
+        for (int i = 0; i < text.length; i++) {
+            int x = (int) pos.x - metrics.stringWidth(text[i]) / 2;
+            final int y = (int) pos.y + (i + 1) * height;
+            buffer.drawString(text[i], x, y);
+        }
     }
 
     private void draw(long curTime) {
@@ -193,9 +196,11 @@ public class GraphicsLayer implements Runnable {
         // Draw player
         drawArrow();
 
-
         buffer.setColor(Color.WHITE);
-        drawCentredText(String.format("%.2f", gameController.getTimeElapsed()), SCORE_FONT.deriveFont(0.03f * size), new Vector(0, -size / 4));
+        drawCentredText(new String[]{
+                String.format("%.2f", gameController.getTimeElapsed()),
+                String.format("%.2f", gameController.getHighscore()),
+        }, SCORE_FONT.deriveFont(0.03f * size), new Vector(0, -size / 4));
 
         // Draw score
         buffer.translate(-width / 2, -height / 2);

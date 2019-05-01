@@ -1,5 +1,4 @@
 import java.util.ArrayDeque;
-import java.util.PriorityQueue;
 import java.util.Queue;
 
 public class GameController implements Runnable {
@@ -7,20 +6,23 @@ public class GameController implements Runnable {
     private long nextTickTime;
     private long nextSpawnTime;
     private static final byte TARGET_TICKRATE = 120;
-    private static final long SPAWN_COOLDOWN = 300;
+    private static final long SPAWN_COOLDOWN = 350;
+    private static final long START_DELAY = 3000;
+    private static final long MIN_DURATION = 1000;
     private InputLayer inputLayer;
 
     private Direction curDirection = Direction.UP;
-    private Queue<Entity> entityQueue;
+    private AsyncPriorityQueue<Entity> entityQueue;
     private int hit = 0;
     private int miss = 0;
     private long startTime;
+    private double highscore;
     private Queue<GameEvent> eventQueue;
 
     GameController(InputLayer inputLayer) {
         this.inputLayer = inputLayer;
         isRunning = true;
-        entityQueue = new PriorityQueue<>((e1, e2) -> (int)(e1.endTime - e2.endTime));
+        entityQueue = new AsyncPriorityQueue<>((e1, e2) -> (int)(e1.endTime - e2.endTime));
         eventQueue = new ArrayDeque<>();
     }
 
@@ -62,6 +64,8 @@ public class GameController implements Runnable {
                 } else {
                     eventQueue.add(new GameEvent("Miss", first.direction));
                     miss++;
+                    highscore = Math.max(highscore, getTimeElapsed());
+                    startTime = curTime;
                 }
 
                 entityQueue.remove();
@@ -87,7 +91,7 @@ public class GameController implements Runnable {
                 break;
         }
 
-        return new Entity(System.currentTimeMillis() + 3000, 1000 + 500 * (int) (3 * Math.random()), direction);
+        return new Entity(System.currentTimeMillis() + START_DELAY, MIN_DURATION + 500 * (int) (3 * Math.random()), direction);
     }
 
     void stop() {
@@ -101,7 +105,7 @@ public class GameController implements Runnable {
 
     void getEntities(Queue<Entity> container) {
         container.clear();
-        container.addAll(entityQueue);
+        entityQueue.addAllTo(container);
     }
 
     int getScoreHit() {
@@ -114,5 +118,9 @@ public class GameController implements Runnable {
 
     double getTimeElapsed() {
         return (System.currentTimeMillis() - startTime) / 1000d;
+    }
+
+    double getHighscore() {
+        return highscore;
     }
 }
