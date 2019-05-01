@@ -27,6 +27,7 @@ public class GraphicsLayer implements Runnable {
     private byte targetFPS = 60;
     private static final double PLAYER_RADIUS = 0.1;
     private static final double ENTITY_RADIUS = 0.06;
+    private static final Font SCORE_FONT = new Font("Arial", Font.PLAIN, 1);
 
     private Map<String, BufferedImage> imageMap;
     private Map<String, String> imagePathMap;
@@ -123,13 +124,13 @@ public class GraphicsLayer implements Runnable {
             return;
         }
 
-        final double angle = getAngle(e.direction);
+        final double angle = getAngle(e.direction) + Math.PI;
         Sprite entitySprite = new Sprite("enemy_1");
         entitySprite.setCentre(true);
         entitySprite.setSize(ENTITY_RADIUS, ENTITY_RADIUS);
         entitySprite.setAngle(angle);
         final double remaining = e.getRemaining(curTime) + PLAYER_RADIUS + ENTITY_RADIUS / 2;
-        entitySprite.setPos(new Vector(0, remaining).rotate(e.direction));
+        entitySprite.setPos(new Vector(0, remaining).rotate(angle));
         final double scaleFactor = (1 - PLAYER_RADIUS - ENTITY_RADIUS / 2) * Math.min(windowDimensions.width, windowDimensions.height) / 2d;
         drawSprite(entitySprite, scaleFactor);
     }
@@ -150,6 +151,24 @@ public class GraphicsLayer implements Runnable {
         }
 
         buffer.drawImage(transformedImage, (int) pos.x, (int) pos.y, (int) newWidth, (int) newHeight, null);
+    }
+
+    private void drawText(String[] text, Font font, Vector pos) {
+        buffer.setFont(font);
+        FontMetrics metrics = buffer.getFontMetrics(font);
+        int height = metrics.getHeight();
+        for (int i = 0; i < text.length; i++) {
+            final int y = (int) pos.y + (i + 1) * height;
+            buffer.drawString(text[i], (int) pos.x, y);
+        }
+    }
+
+    private void drawCentredText(String text, Font font, Vector centre) {
+        buffer.setFont(font);
+        FontMetrics metrics = buffer.getFontMetrics(font);
+        int x = (int) centre.x - metrics.stringWidth(text) / 2;
+        int y = (int) centre.y - metrics.getHeight() / 2;
+        buffer.drawString(text, x, y);
     }
 
     private void draw(long curTime) {
@@ -174,7 +193,17 @@ public class GraphicsLayer implements Runnable {
         // Draw player
         drawArrow();
 
+
+        buffer.setColor(Color.WHITE);
+        drawCentredText(String.format("%.2f", gameController.getTimeElapsed()), SCORE_FONT.deriveFont(0.03f * size), new Vector(0, -size / 4));
+
+        // Draw score
         buffer.translate(-width / 2, -height / 2);
+        buffer.setColor(Color.BLACK);
+        drawText(new String[]{
+                "Hit: " + gameController.getScoreHit(),
+                "Miss: " + gameController.getScoreMiss(),
+        }, SCORE_FONT.deriveFont(0.04f * size), new Vector(0, 0));
 
         g.drawImage(bufferImage, 0, 0, null);
     }

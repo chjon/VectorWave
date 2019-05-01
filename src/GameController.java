@@ -1,3 +1,4 @@
+import java.util.ArrayDeque;
 import java.util.PriorityQueue;
 import java.util.Queue;
 
@@ -11,15 +12,21 @@ public class GameController implements Runnable {
 
     private Direction curDirection = Direction.UP;
     private Queue<Entity> entityQueue;
+    private int hit = 0;
+    private int miss = 0;
+    private long startTime;
+    private Queue<GameEvent> eventQueue;
 
     GameController(InputLayer inputLayer) {
         this.inputLayer = inputLayer;
         isRunning = true;
         entityQueue = new PriorityQueue<>((e1, e2) -> (int)(e1.endTime - e2.endTime));
+        eventQueue = new ArrayDeque<>();
     }
 
     @Override
     public void run() {
+        startTime = System.currentTimeMillis();
         while (isRunning) {
             final long curTime = System.currentTimeMillis();
             if (curTime < nextTickTime) {
@@ -35,10 +42,7 @@ public class GameController implements Runnable {
         // Spawn entities
         if (curTime > nextSpawnTime) {
             nextSpawnTime = curTime + SPAWN_COOLDOWN;
-            Entity generated = generateEntity();
-            if (generated != null) {
-                entityQueue.add(generated);
-            }
+            entityQueue.add(generateEntity());
         }
 
         // Set direction
@@ -52,6 +56,14 @@ public class GameController implements Runnable {
         if (entityQueue.size() > 0) {
             Entity first = entityQueue.peek();
             if (first.endTime < curTime) {
+                if (first.direction == curDirection) {
+                    eventQueue.add(new GameEvent("Hit", first.direction));
+                    hit++;
+                } else {
+                    eventQueue.add(new GameEvent("Miss", first.direction));
+                    miss++;
+                }
+
                 entityQueue.remove();
             }
         }
@@ -80,6 +92,7 @@ public class GameController implements Runnable {
 
     void stop() {
         isRunning = false;
+        System.out.println("Hit " + hit + ", Missed " + miss);
     }
 
     Direction getCurDirection() {
@@ -89,5 +102,17 @@ public class GameController implements Runnable {
     void getEntities(Queue<Entity> container) {
         container.clear();
         container.addAll(entityQueue);
+    }
+
+    int getScoreHit() {
+        return hit;
+    }
+
+    int getScoreMiss() {
+        return miss;
+    }
+
+    double getTimeElapsed() {
+        return (System.currentTimeMillis() - startTime) / 1000d;
     }
 }
