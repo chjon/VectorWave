@@ -138,7 +138,7 @@ public class GraphicsLayer implements Runnable {
                 if (remaining >= BEGIN_SPIN) {
                     angle += Math.PI;
                 } else if (remaining >= END_SPIN) {
-                    angle += Math.PI * (remaining - SPIN_TIME) / SPIN_TIME;
+                    angle += Math.PI * (remaining - END_SPIN) / SPIN_TIME;
                 }
                 break;
             default:
